@@ -83,8 +83,9 @@ Results visualization:
 ```mathematica
 img = Import["path/to/image.tif"]
 ```
-
-2. Run analysis functions:
+2. Copy code contents from [cornProcessingCode.txt](https://github.com/nranabhat/corn-kernel-image-processing/blob/main/cornProcessingCode.txt) into a Mathematica notebook. 
+   
+3. Run analysis functions:
 ```mathematica
 kernelCount = cornCountNMR[img]
 centroids = cornCentroidNMR[img]
