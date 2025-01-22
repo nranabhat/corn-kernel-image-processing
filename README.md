@@ -10,17 +10,34 @@ An automated image processing system developed for the Department of Plant and A
 ## Background
 Agricultural research often requires precise measurement of kernel characteristics across large sample sizes. Manual analysis is time-consuming and can introduce human error. This automated system provides consistent, rapid analysis of corn kernel images to support research in plant genetics and crop development.
 
+![Kernel feature diagram](images/apex_label_example.png)
+
+*Diagram showing key features to detect: the centroid (center of mass) and apex (pointed end) of each kernel*
+
+![Example of centroid and apex detection](images/apex_centroid_position_example.png)
+
+*Example of the ground truth for one sample showing kernel count, centroid and apex locations*
+
+The system not only detects these geometric features but also classifies kernels based on their crown type - either red-crowned or white-crowned:
+
+![Red kernel example](images/template_red.png) ![White kernel example](images/template_white.png)
+
+*Examples of red-crowned (left) and white-crowned (right) kernels*
+
+These measurements and classifications are crucial for:
+- Tracking kernel development and morphology
+- Analyzing genetic traits across different corn varieties
+- Supporting large-scale agricultural research studies
+
 ## Results & Performance
 
-| Metric | Value | Rank |
+| Metric | Value | Class Rank |
 |--------|-------|------|
 | Kernel Counting Error Rate | 1.4% | 19th |
 | Avg Centroid Detection Error | 3.13 pixels | 6th |
 | Avg Apex Detection Error | 15.21 pixels | 2nd |
 | Classification Error Rate | 5.4% | 15.5th |
 | **Final Score** | **94.382/100** | - |
-
-![Example of centroid and apex detection](images/apex_centroid_position_example.png)
 
 ## Methodology
 
