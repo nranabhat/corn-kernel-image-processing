@@ -1,0 +1,658 @@
+# Function Definitions 
+
+## 1. Corn Count
+
+cornCountNMR[img_ ] := 
+ Module[{binImg, filteredImg, fillImg, erodeImg, median, 
+   connectedKernels, maskEroded, connectedRemoved, separatedKernels, 
+   centroids},
+  binImg = Binarize[img];
+  filteredImg = WienerFilter[binImg, 100];
+  fillImg = FillingTransform[filteredImg];
+  erodeImg = Opening[fillImg, DiskMatrix[20]];
+  fillImg = FillingTransform[erodeImg];
+  
+  median = Median[Values[ComponentMeasurements[fillImg, "Area"]]]; 
+  connectedKernels = SelectComponents[fillImg, #Area > median*1.5 &]; 
+  maskEroded = 
+   Dilation[Erosion[connectedKernels, DiskMatrix[40]], 
+    DiskMatrix[20]]; 
+  connectedRemoved = 
+   ImageMultiply[ColorNegate[connectedKernels], fillImg]; 
+  separatedKernels = ImageAdd[connectedRemoved, maskEroded];
+  
+  centroids = 
+   ComponentMeasurements[separatedKernels, "Centroid", #Area > 1000 &];
+  Length[centroids]
+  ]
+
+
+## 2. Centroid and Apex finder
+
+cornCentroidNMR[img_ ] := 
+ Module[{binImg, filteredImg, fillImg, erodeImg, median, 
+   connectedKernels, maskEroded, connectedRemoved, separatedKernels, 
+   cent},
+  binImg = Binarize[img];
+  filteredImg = WienerFilter[binImg, 100];
+  fillImg = FillingTransform[filteredImg];
+  erodeImg = Opening[fillImg, DiskMatrix[20]];
+  fillImg = FillingTransform[erodeImg];
+  
+  median = Median[Values[ComponentMeasurements[fillImg, "Area"]]]; 
+  connectedKernels = SelectComponents[fillImg, #Area > median*1.5 &]; 
+  maskEroded = 
+   Dilation[Erosion[connectedKernels, DiskMatrix[40]], 
+    DiskMatrix[20]]; 
+  connectedRemoved = 
+   ImageMultiply[ColorNegate[connectedKernels], fillImg]; 
+  separatedKernels = ImageAdd[connectedRemoved, maskEroded];
+  
+  cent = 
+   Values[ComponentMeasurements[separatedKernels, 
+     "Centroid", #Area > 1000 &]];
+  out = cent
+  ]
+
+cornApexNMR[ img_ ] := 
+ Module[{binImg, filteredImg, fillImg, erodeImg, median, 
+   connectedKernels, maskEroded, connectedRemoved, separatedKernels, 
+   n, apexEstimateCords, convexVertices, indexFurthestVertex, 
+   meanVertexDist},
+  binImg = Binarize[img];
+  filteredImg = WienerFilter[binImg, 100];
+  fillImg = FillingTransform[filteredImg];
+  erodeImg = Opening[fillImg, DiskMatrix[20]];
+  fillImg = FillingTransform[erodeImg];
+  
+  median = Median[Values[ComponentMeasurements[fillImg, "Area"]]]; 
+  connectedKernels = SelectComponents[fillImg, #Area > median*1.5 &]; 
+  maskEroded = 
+   Dilation[Erosion[connectedKernels, DiskMatrix[40]], 
+    DiskMatrix[20]]; 
+  connectedRemoved = 
+   ImageMultiply[ColorNegate[connectedKernels], fillImg]; 
+  separatedKernels = ImageAdd[connectedRemoved, maskEroded];
+  
+  (*n=number of kernels in the image*)
+  n = Length[
+    ComponentMeasurements[separatedKernels, 
+     "Centroid", #Area > 1000 &]];
+  
+  apexEstimateCords = {};
+  For[i = 1, i < n + 1, i++,
+   (*Find all coordinates of vertexes of the convex hull for kernel i*)
+   convexVertices = 
+    ComponentMeasurements[separatedKernels, 
+      "ConvexVertices", #Area > 1000 &][[i]];
+   
+   meanVertexDist = {};
+   m = Length[Values[convexVertices]];
+   For[k = 1, k < m + 1, k++,
+    AppendTo[meanVertexDist,
+      Mean[
+       DistanceMatrix[{Values[convexVertices][[k]]}, 
+         Values[convexVertices]][[1]]]
+      ];
+    ];
+   (*Find index of furthest convex vertex*)
+   indexFurthestVertex = 
+    Position[meanVertexDist, Max[meanVertexDist]][[1]][[1]];
+   (*Find coordinates of furthest vertex*)
+   AppendTo[apexEstimateCords, 
+    Values[convexVertices][[indexFurthestVertex]]];
+   ];
+  apexEstimateCords
+  ]
+
+
+## 3. White or Red
+
+cornRedOrWhiteNMR[ img_ ] := 
+ Module[{binImg, filteredImg, , fillImg, erodeImg, median, 
+   connectedKernels, maskEroded, connectedRemoved, separatedKernels, 
+   centroids, allKernels, coloredKernels, channeledImg, standardSize, 
+   templateSize, template1, template2, labeled, labeledBoundingBoxes, 
+   boundingBoxes, similarityThreshold, compareWithTemplates, 
+   apexEstLabels},
+  
+  binImg = Binarize[img];
+  filteredImg = WienerFilter[binImg, 100];
+  fillImg = FillingTransform[filteredImg];
+  erodeImg = Opening[fillImg, DiskMatrix[20]];
+  fillImg = FillingTransform[erodeImg];
+  
+  median = Median[Values[ComponentMeasurements[fillImg, "Area"]]]; 
+  connectedKernels = SelectComponents[fillImg, #Area > median*1.5 &];
+  maskEroded = 
+   Dilation[Erosion[connectedKernels, DiskMatrix[40]], 
+    DiskMatrix[20]]; 
+  connectedRemoved = 
+   ImageMultiply[ColorNegate[connectedKernels], fillImg]; 
+  separatedKernels = ImageAdd[connectedRemoved, maskEroded];
+  
+  (*Find centroids*)
+  centroids = 
+   ComponentMeasurements[separatedKernels, "Centroid", #Area > 1000 &];
+  
+  allKernels = 
+   SelectComponents[separatedKernels, #Area > 0.25*median &];
+  coloredKernels = ImageMultiply[img, allKernels];
+  
+  channeledImg = coloredKernels;
+  standardSize = {100, 
+    100};  (*Define the standard size for comparison*)
+  templateSize  = {100, 100};
+
+template1 = ImageResize...
+template2 = ImageResize...
+
+labeled = MorphologicalComponents[channeledImg];
+ labeledBoundingBoxes = 
+   ComponentMeasurements[labeled, "BoundingBox"];
+ boundingBoxes = Values[labeledBoundingBoxes];
+ 
+ similarityThreshold = 0.1;  (*Define a threshold for similarity*)
+ compareWithTemplates[component_] := 
+   Module[{region, resizedRegion, dRed, dWhite, label},
+    region = ImageTrim[channeledImg, component];
+    resizedRegion = ImageResize[region, standardSize];
+    dRed = ImageDistance[resizedRegion, template1];
+    dWhite = ImageDistance[resizedRegion, template2];
+    
+    If[Abs[dRed - dWhite] < similarityThreshold,
+     label = -1,(*Assign-1 if distances are similar*)
+     label = 
+      If[dRed <= dWhite, 1, 0]  (*Else choose the closer template*)];
+    label
+    ];
+ 
+ apexEstLabels = compareWithTemplates /@ boundingBoxes;
+ 
+ out = MapThread[Append, {Values[centroids], apexEstLabels}]
+ ]
+
+
+
+# Problems and Work
+
+## Problem 1: Counting Kernels of Corn
+An important part of raising corn is to track how many kernels are produced by the ears of corn. The Department of Cornology has supplied us with a collection of images, each of which contains a large number of kernels. You can see that there are approximately 80-100 kernels in each image. In this first problem, you will build an algorithm that counts the number of kernels in each image. We have supplied you with 10 images that you can use to build and test your counting method. You can see that the hard part is when the kernels touch or overlap. For some of the images, simple techniques like Binarization will go a long way, but for others, more sophisticated processing may be needed.
+
+The 10 test images, and the number of kernels in each are given in the following table. These can be found in the folder titled "originalImages" and they are labelled "1.tif", "2.tif", etc. The corresponding ground truth (i..e, the true number of kernels) is:
+
+kerCount = {{1, 73}, {2, 100}, {3, 66}, {4, 89}, {5, 98}, {6, 63}, {7,
+     93}, {8, 98}, {9, 85}, {10, 115}};
+
+You goal is to build a function
+
+cornCountXYZ[img_ ] := Module[{},
+  processing;
+  out = num of kernels in img
+  ]
+
+where XYZ are your initials. We will test your counting method on a small number of similar (but not identical) images. 
+
+
+## Problem 2: Finding the Centroid and Apex
+
+As you have seen in a previous assignment, typical kernels of corn have a characteristic shape/form. Two important points in this shape are the centroid (the "center of mass") of the kernel and the apex (the pointed end). In problem 2, you will build an algorithm that will extract each kernel in the image (that your problem 1 algorithm has located and counted) and will output the coordinates of the centroid and the coordinates of the apex. You will very likely find that the command ComponentMeasurements is very useful in these tasks. 
+
+Your goal in this problem is to build two functions:
+
+cornCentroidXYZ[ img_ ] := Module[{},
+  processing;
+  out = centroids of all kernels in img
+  ]
+
+cornApexXYZ[ img_ ] := Module[{},
+  processing;
+  out = coordinates of all apexes in img
+  ]
+
+where "out" is a list of the coordinates of all the detected kernels. The order of the does not matter. Each of the output lists should look like this:
+
+{ {cx1, cy1}, {cx2, cy2}, ... , {cxN, cyN} }
+
+where N is the total number of detected kernels.
+
+You can import a spreadsheet that gives the appropriate data for three of the test images (No. 1, 3, and 6). This is essentially a table that lists, for each image, the centroids and apexes of each kernel in the image. You should use this information to make sure that the output of your functions makes sense.
+
+The headers in the spreadsheet are:
+
+{"Index", "Centroid_1", "Centroid2", "Apex1", "Apex2", "Label"}
+
+and you can see that there are 74 detected kernels in this image
+
+each of which looks like this:
+
+{9, 576.871, 1589.87, 640.423, 1696.87, 1}
+
+You can visualize this data (for the three images) with the annotated images found in the folder "annotatedImages." To generate such pictures, you could do something like this:
+
+img =  Import[
+   NotebookDirectory[] <> 
+    "/cornProject/cornProject/originalImages/1.tif"];
+data = Import[
+   NotebookDirectory[] <> "/cornProject/cornProject/cent+apex1.csv"];
+n = Length[data] - 1 (*number of kernels*);
+centroidText = 
+  Table[Text[
+    Style[ToString[data[[i]][[1]]], Small], {data[[i]][[2]], 
+     data[[i]][[3]]}], {i, 2, n}];
+apexPoints = Table[{data[[i]][[4]], data[[i]][[5]]}, {i, 2, n}];
+HighlightImage[img, {Join[{RGBColor[0, 0, 1]}, centroidText], 
+  Graphics[{PointSize[0.01], Point[apexPoints]}]}]
+
+
+
+## Get Ground Truth Centers and Apexes
+
+(*Get ground truths*)
+centroidText = 
+  Table[Text[
+    Style[ToString[data[[i]][[1]]], Small], {data[[i]][[2]], 
+     data[[i]][[3]]}], {i, 2, n}];
+apexPoints = Table[{data[[i]][[4]], data[[i]][[5]]}, {i, 2, n}];
+n = Length[data] - 1;
+trueCenterCords = {};
+trueApexCords = {};
+For[i = 2, i < n + 2, i++,
+ AppendTo[trueCenterCords, {data[[i]][[2]], data[[i]][[3]]}];
+ AppendTo[trueApexCords, {data[[i]][[4]], data[[i]][[5]]}];
+ ]
+trueCenterCords;
+trueApexCords;
+(*Now I have the coordinates of the true centriods and apexs.*)
+
+## Finding Centroid
+
+### Method 1
+
+(*
+(*Finding centriod of each component in a corn image*)
+cornCentroidNMR[ img_ ]:= 
+ Module[{binImg, filteredImg,fillImg,erodeImg,erodeImg2,cent},
+  binImg = Binarize[img];
+  filteredImg = WienerFilter[binImg,100];
+  fillImg = FillingTransform[filteredImg];
+  erodeImg = Erosion[fillImg,DiskMatrix[10]];
+  fillImg = FillingTransform[erodeImg];
+  erodeImg2 = Erosion[fillImg, DiskMatrix[32]];
+  out cent = ComponentMeasurements[erodeImg2,"Centroid", #Area > 50&]
+  ]
+
+### Method 2
+
+cornCentroidNMR[img_ ] := 
+ Module[{binImg, filteredImg, fillImg, erodeImg, median, 
+   connectedKernels, maskEroded, connectedRemoved, separatedKernels, 
+   centroids},
+  binImg = Binarize[img];
+  filteredImg = WienerFilter[binImg, 100];
+  fillImg = FillingTransform[filteredImg];
+  erodeImg = Opening[fillImg, DiskMatrix[20]];
+  fillImg = FillingTransform[erodeImg];
+  
+  median = Median[Values[ComponentMeasurements[fillImg, "Area"]]]; 
+  connectedKernels = SelectComponents[fillImg, #Area > median*1.5 &]; 
+  maskEroded = 
+   Dilation[Erosion[connectedKernels, DiskMatrix[40]], 
+    DiskMatrix[20]]; 
+  connectedRemoved = 
+   ImageMultiply[ColorNegate[connectedKernels], fillImg]; 
+  separatedKernels = ImageAdd[connectedRemoved, maskEroded];
+  
+  out centroids = 
+   Values[ComponentMeasurements[separatedKernels, 
+     "Centroid", #Area > 1000 &]]
+  ]
+
+(*Visually plot each centriod in image 1*)
+img = cornImgs[[1]];
+cent = cornCentroidNMR[img];
+n = Length[cent];
+centroidText = 
+  Table[Text[
+    Style[ToString[i], Small], {cent[[i]][[1]], cent[[i]][[2]]}], {i, 
+    1, n}];
+HighlightImage[img, {Join[{RGBColor[0, 0, 1]}, centroidText], 
+  Graphics[{PointSize[0.01]}]}]
+
+
+## Finding MSE for Centroid Comparisons
+
+(*Creating a better metric than visual comparisons. Let's find the \
+MSE between our estimates and the truth!*)
+distMSE[ estimate_, truth_ ] := 
+ Module[{n, errors, distances, smallestDist},
+  n = Length[estimate];
+  errors = {};
+  distances = DistanceMatrix[estimate, truth];
+  For[i = 1, i < n + 1, i++,
+   smallestDist = Min[distances[[i]]];
+   If[smallestDist < 1000,
+    AppendTo[errors, smallestDist],
+    Break
+    ]
+   ];
+  MSE = Mean[errors]
+  ]
+
+MSE = distMSE[cent, trueCenterCords]
+
+8.18349
+
+
+# Finding Apex
+
+find the maximum mean distance of each convex vertex from all of the other ones. Pick the one with the largest mean distance as the apex. 
+
+## Method 1 - Find Furthest Convex Vertex from Centroid:
+
+(*
+testCornApexNMR[ img_ ]:= Module[{},
+  (*Finding components with same corn Count algorithm*)
+  binImg = Binarize[img];
+  filteredImg = WienerFilter[binImg,100];
+  fillImg = FillingTransform[filteredImg];
+  erodeImg = Opening[fillImg,DiskMatrix[20]];
+  fillImg = FillingTransform[erodeImg];
+  
+  median=Median[Values[ComponentMeasurements[fillImg,"Area"]]];
+  connectedKernels=SelectComponents[fillImg,#Area>median*1.5&];
+  maskEroded=
+   Dilation[Erosion[connectedKernels,DiskMatrix[40]],DiskMatrix[20]];
+  connectedRemoved=
+   ImageMultiply[ColorNegate[connectedKernels],fillImg];
+  separatedKernels=ImageAdd[connectedRemoved,maskEroded];
+  
+  n = Length[
+    ComponentMeasurements[separatedKernels, "Centroid",#Area>1000&]];
+  
+  (*Find all coordinates of vertexes of the convex hull*)
+  convexVertices = 
+   ComponentMeasurements[separatedKernels, 
+    "ConvexVertices",#Area>1000&];
+  apexEstimateCords = {};
+  For[i=1,i<n+1,i++,
+   furthestVertexDist = 
+    Max[DistanceMatrix[
+      Values[convexVertices[[i]]],{centroidCords[[i]]}]];
+   m=Length[Values[convexVertices[[i]]]];
+   indexFurthestVertex = 0;
+   For[j=1,j<m+1,j++,
+    (*find furthest convex vertex from centriod for i'th kernel*)
+    If[EuclideanDistance[Values[convexVertices[[i]]][[j]], 
+       centroidCords[[i]]]==furthestVertexDist,
+     indexFurthestVertex = j]
+    ];
+   cordFurthestVertex = 
+    Values[convexVertices[[i]]][[indexFurthestVertex]];
+   AppendTo[apexEstimateCords,cordFurthestVertex];
+   ];
+  apexEstimateCords
+  ]
+
+(*visualize accuracy*)
+apexEstimatedCords = testCornApexNMR[cornImgs[[6]]];
+n = Length[apexEstimateCords];
+centroidText = 
+  Table[Text[
+    Style[ToString[cent[[i]][[1]]], Small], {cent[[i, 2]][[1]], 
+     cent[[i, 2]][[2]]}], {i, 1, n}];
+HighlightImage[img, {Join[{RGBColor[0, 0, 1]}, centroidText], 
+  Graphics[{PointSize[0.01], Point[apexEstimateCords]}]}]
+
+
+MSE = distMSE[apexEstimateCords, trueApexCords]
+
+85.9005
+
+
+## Method 2 - Find the Vertex with the Max avg distance to all other Convex Vertices:
+
+cornApexNMR[ img_ ] := 
+ Module[{binImg, filteredImg, fillImg, erodeImg, median, 
+   connectedKernels, maskEroded, connectedRemoved, separatedKernels, 
+   n, apexEstimateCords, convexVertices, indexFurthestVertex, 
+   meanVertexDist},
+  binImg = Binarize[img];
+  filteredImg = WienerFilter[binImg, 100];
+  fillImg = FillingTransform[filteredImg];
+  erodeImg = Opening[fillImg, DiskMatrix[20]];
+  fillImg = FillingTransform[erodeImg];
+  
+  median = Median[Values[ComponentMeasurements[fillImg, "Area"]]]; 
+  connectedKernels = SelectComponents[fillImg, #Area > median*1.5 &]; 
+  maskEroded = 
+   Dilation[Erosion[connectedKernels, DiskMatrix[40]], 
+    DiskMatrix[20]]; 
+  connectedRemoved = 
+   ImageMultiply[ColorNegate[connectedKernels], fillImg]; 
+  separatedKernels = ImageAdd[connectedRemoved, maskEroded];
+  
+  (*n=number of kernels in the image*)
+  n = Length[
+    ComponentMeasurements[separatedKernels, 
+     "Centroid", #Area > 1000 &]];
+  
+  apexEstimateCords = {};
+  For[i = 1, i < n + 1, i++,
+   (*Find all coordinates of vertexes of the convex hull for kernel i*)
+   convexVertices = 
+    ComponentMeasurements[separatedKernels, 
+      "ConvexVertices", #Area > 1000 &][[i]];
+   
+   meanVertexDist = {};
+   m = Length[Values[convexVertices]];
+   For[k = 1, k < m + 1, k++,
+    AppendTo[meanVertexDist,
+      Mean[
+       DistanceMatrix[{Values[convexVertices][[k]]}, 
+         Values[convexVertices]][[1]]]
+      ];
+    ];
+   (*Find index of furthest convex vertex*)
+   indexFurthestVertex = 
+    Position[meanVertexDist, Max[meanVertexDist]][[1]][[1]];
+   (*Find coordinates of furthest vertex*)
+   AppendTo[apexEstimateCords, 
+    Values[convexVertices][[indexFurthestVertex]]];
+   ];
+  apexEstimateCords
+  ]
+
+img = cornImgs[[1]];
+apexEstimateCords = cornApexNMR[cornImgs[[1]]];
+centroidText = 
+  Table[Text[
+    Style[ToString[i], Small], {cent[[i]][[1]], cent[[i]][[2]]}], {i, 
+    1, n}];
+HighlightImage[img, {Join[{RGBColor[0, 0, 1]}, centroidText], 
+  Graphics[{PointSize[0.01], Point[apexEstimateCords]}]}]
+
+
+MSE = distMSE[apexEstimateCords, trueApexCords]
+
+28.6473
+
+
+
+# Problem 3: Red or White?
+
+If you look at the kernels, you will notice that there are two types. About half the kernels are topped with a red crown, and about half have a whitish face near the apex. The image above shows one of the red topped kernels, while one of the white tips is shown below. 
+
+Your goal in this problem is to build a function that will determine which side is shown: red or white. This should take the form of a function
+
+cornRedOrWhiteXYZ[ img_ ] := Module[{},
+  processing;
+  out = {centroid of kernel, 
+    indicator (1 if red, 0 if white, -1 if unknown) }
+  ]
+
+where "out" is a list of the coordinates of all the detected kernels. The order of the kernels does not matter. Each of the output lists should look like this:
+
+{ {cx1, cy1, indicator1}, {cx2, cy2, indicator2}, ... , {cxN, cyN, indicatorN} }
+
+where N is the total number of detected kernels, the cx1 and cx2 are the coordinates of the centroid of the current specified kernel, and the indicator is 1, 0, or -1.
+
+For the three images (No. 1, 3, and 6) you can find the ground truth labels in the final number in the list: 1 if red, 0 if white, and -1 if indeterminate. You can use this information to make sure that the output of your functions makes sense.
+
+(*
+(*first, get separated kernel mask*)
+cornImgs=
+ Table[Import[
+   StringJoin[ToString[NotebookDirectory[]],
+    "\\cornProject\\cornProject\\originalImages\\", 
+         ToString[i], ".tif"]], {i, 6}];
+c=6;
+img = cornImgs[[c]];
+binImg = Binarize[img];
+filteredImg = WienerFilter[binImg,100];
+fillImg = FillingTransform[filteredImg];
+erodeImg = Opening[fillImg,DiskMatrix[20]];
+fillImg = FillingTransform[erodeImg];
+
+median=Median[
+  Values[ComponentMeasurements[fillImg,"Area"]]];connectedKernels=
+ SelectComponents[fillImg,#Area>median*1.5&];
+maskEroded=
+ Dilation[Erosion[connectedKernels,DiskMatrix[40]],
+  DiskMatrix[20]];connectedRemoved=
+ ImageMultiply[ColorNegate[connectedKernels],
+  fillImg];separatedKernels=ImageAdd[connectedRemoved,maskEroded];
+allKernels = SelectComponents[separatedKernels, #Area>0.25*median&];
+coloredKernels = ImageMultiply[img,allKernels];
+
+(*
+(*Now look at the ground truth values*)
+img =  Import[
+  NotebookDirectory[]<>"/cornProject/cornProject/originalImages/" <>
+   ToString[c]<>".tif"];
+data=Import[
+  NotebookDirectory[]<>"/cornProject/cornProject/cent+apex" <>
+   ToString[c]<>".csv"];
+n = Length[data]-1 (*number of kernels*)
+   apexPoints = Table[{data[[i]][[4]],data[[i]][[5]]},{i,2,n}];
+apexLabels = Table[data[[i]][[6]],{i,2,n}];
+
+(*Create a list of hollow circles with colors based on the labels*)
+coloredCircles=Table[
+  {If[apexLabels[[i]]==1,White,
+    If[apexLabels[[i]]==0,Red,
+     Gray ]
+    ],
+   Circle[apexPoints[[i]],Scaled[0.01]]},
+  {i,1,n-1}
+  ];
+(*Highlight the image with the colored circles*)
+HighlightImage[img,Graphics[{Thickness[0.0025],coloredCircles}]];
+
+63
+
+(*
+(*See if converting to different color basis brings out the \
+differences*)
+{h,s,b} = ColorSeparate[coloredKernels, "HSB"];
+{red,green,blue} = ColorSeparate[coloredKernels, "RGB"];
+{c,m,y,k}=ColorSeparate[coloredKernels,"CMYK"];
+l = ColorSeparate[coloredKernels,"Luminance"];
+a = ColorSeparate[coloredKernels,"Average"];
+HighlightImage[5*h,Graphics[{Thickness[0.0025],coloredCircles}]];
+HighlightImage[a,Graphics[{Thickness[0.0025],coloredCircles}]];
+Histogram[Select[Flatten[5*ImageData[h]],#>=0.02&&#<0.98&]]
+ Histogram[Select[Flatten[ImageData[blue/green]],#>=0.02&&#<0.98&]]
+ Histogram[Select[Flatten[ImageData[blue+green]],#>=0.02&&#<0.98&]]
+ (*Bimodal distributions: h,a *)
+ 
+ (*Could try ImageSubtract[img,g,b] to get red parts, then segment \
+those and if the area is large enough classify as red kernel.*)
+
+
+## Calculating Errors
+(*Count errors for each category*)
+errorsRed = 0;
+errorsWhite = 0;
+errorsIntermediate = 0;
+Do[If[apexEstLabels[[i]] != apexLabels[[i]], 
+  Switch[apexLabels[[i]], 1, errorsRed++, 0, errorsWhite++, -1, 
+   errorsIntermediate++]], {i, Length[apexLabels]}]
+
+totalRed = Count[apexLabels, 1];
+totalWhite = Count[apexLabels, 0];
+totalIntermediate = Count[apexLabels, -1];
+
+errorRateRed = If[totalRed > 0, errorsRed/totalRed, 0];
+errorRateWhite = If[totalWhite > 0, errorsWhite/totalWhite, 0];
+errorRateIntermediate = 
+  If[totalIntermediate > 0, errorsIntermediate/totalIntermediate, 0];
+
+errorRates = {N[errorRateRed], N[errorRateWhite], 
+  N[errorRateIntermediate]}
+
+{0.4375, 0.352941, 0.916667}
+
+
+## Tinkering around from Thursday...
+
+(*
+(*Now we can try to threshold and classify*)
+(*Label each kernel*)
+labeled=MorphologicalComponents[red];
+
+(*calculate mean "h" value for each component*)
+kernelMeans=ComponentMeasurements[{labeled,red},"MeanIntensity"];
+Histogram[5*Values[kernelMeans]];
+(*Filter out the kernels based on the threshold*)
+threshold=0.6; (*Set your threshold value*)
+selectedKernels=Select[kernelMeans,Last[#]>threshold&];
+
+(*The result is a list of kernel labels with mean "H" values above \
+the threshold*)
+selectedKernels;
+indexRedKer = Keys[selectedKernels];
+
+apexEstLabels=ConstantArray[0,n];
+apexEstLabels[[indexRedKer]]=1;
+
+(*Find the error rate*)
+errorsRed=0;
+errorsWhite=0;
+errorsIntermediate=0;
+
+(*Count errors for each category*)
+Do[If[apexEstLabels[[i]]!=apexLabels[[i]],
+   Switch[apexLabels[[i]],1,errorsRed++,0,errorsWhite++,-1,
+    errorsIntermediate++]],{i,Length[apexLabels]}]
+ 
+ totalRed=Count[apexLabels,1];
+totalWhite=Count[apexLabels,0];
+totalIntermediate=Count[apexLabels,-1];
+
+errorRateRed=If[totalRed>0,errorsRed/totalRed,0];
+errorRateWhite=If[totalWhite>0,errorsWhite/totalWhite,0];
+errorRateIntermediate=
+ If[totalIntermediate>0,errorsIntermediate/totalIntermediate,0];
+
+errorRates = {N[errorRateRed],N[errorRateWhite],
+  N[errorRateIntermediate]}
+
+{0.666667, 0.404255, 0.}
+
+
+(*
+(*Visualize the performance of the prediction *)
+coloredEstCircles=Table[
+  {If[apexEstLabels[[i]]==1,White,
+    If[apexEstLabels[[i]]==0,Red,
+     Gray ]
+    ],
+   Circle[apexPoints[[i]],Scaled[0.01]]},
+  {i,1,n-1}
+  ];
+
+HighlightImage[img,Graphics[{Thickness[0.0025],coloredEstCircles}]]
+
+
+
