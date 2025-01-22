@@ -11,12 +11,14 @@ An automated image processing system developed for the Department of Plant and A
 Agricultural research often requires precise measurement of kernel characteristics across large sample sizes. Manual analysis is time-consuming and can introduce human error. This automated system provides consistent, rapid analysis of corn kernel images to support research in plant genetics and crop development.
 
 ## Results & Performance
-The system achieved strong results across multiple metrics:
-- Kernel Counting Error: 14 kernels average deviation
-- Centroid Detection Mean Error: 3.13 pixels
-- Apex Detection Mean Error: 15.21 pixels
-- Overall Classification Accuracy: Ranked 15.5 out of all submissions
-- Final Score: 94.382 out of 100
+
+| Metric | Value | Rank |
+|--------|-------|------|
+| Kernel Counting Error Rate | 1.4% | 19th |
+| Avg Centroid Detection Error | 3.13 pixels | 6th |
+| Avg Apex Detection Error | 15.21 pixels | 2nd |
+| Classification Error Rate | 5.4% | 15.5th |
+| **Final Score** | **94.382/100** | - |
 
 ![Example of centroid and apex detection](images/apex_centroid_position_example.png)
 
@@ -71,21 +73,8 @@ Results visualization:
   - `cornApexNMR`: Apex detection
   - `cornRedOrWhiteNMR`: Kernel classification
 
-### Performance Metrics
-```
-error_counting:        14.0
-error_centroid_mean:   3.1333
-error_apex_mean:       15.211
-error_label_total:     54.0
-counting_rank:         19
-centroid_rank:         6
-apex_rank:            2
-label_error_rank:      15.5
-final_score:           94.382
-```
-
 ## Requirements
-- Mathematica (version used in development)
+- Mathematica 13.1
 - Input images should be high-resolution TIF files
 - Consistent lighting conditions for optimal performance
 
